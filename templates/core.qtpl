@@ -1,0 +1,14 @@
+{% func Head(title string) %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Login into relax</title>
+</head>
+<body>
+{% endfunc %}
+
+{% func Footer() %}
+</body>
+</html>
+{% endfunc %}

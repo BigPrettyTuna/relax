@@ -1,0 +1,11 @@
+{% func IndexPage() %}
+{%= Head("login") %}
+<form method="post" action="/login">
+    <p>login</p>
+    <input type="text" name="login">
+    <p>password</p>
+    <input type="text" name="password">
+    <input type="submit" value="Log in">
+</form>
+{%= Footer() %}
+{% endfunc %}

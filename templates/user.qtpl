@@ -1,0 +1,18 @@
+{% code type User struct {
+Id       int `db:"id"`
+Login    string `db:"name"`
+Password string `db:"password"`
+Salt     string `db:"salt"`
+}
+%}
+
+{% func UserPage() %}
+{%= Head("login") %}
+<form method="post" action="/user/updateinfo">
+    <p></p>
+    <p>type of event</p>
+    <input type="text" name="type">
+    <input type="submit" value="Start event">
+</form>
+{%= Footer() %}
+{% endfunc %}

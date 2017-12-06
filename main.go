@@ -12,6 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/bigprettytuna/relax/templates"
 	"fmt"
+	"strings"
 )
 
 var config struct {
@@ -23,12 +24,7 @@ var config struct {
 	SessionKey string `json:"sessionKey"`
 }
 
-type User struct {
-	Id       string `db:"id"`
-	Login    string `db:"name"`
-	Password string `db:"password"`
-	Salt     string `db:"salt"`
-}
+type User = templates.User
 
 var (
 	configFile  = flag.String("config", "conf.json", "Where to read the config from")
@@ -53,40 +49,44 @@ func loadConfig() error {
 	return nil
 }
 
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-
-}
-
-//func (s *server) loginPageHandler(w http.ResponseWriter, r *http.Request) {
-//	log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
-//	session, _ := store.Get(r, "loginData")
-//	//userInfo, err := s.getUserFromDbByLogin(r.PostForm.Get("login"))
-//	if session.Values["login"] != nil {
-//			http.Redirect(w, r, "/user/", 302)
-//	}
-//	template, err := template.ParseFiles("templates/login.html")
-//	if err != nil {
-//		log.Println(err)
-//		return
-//	}
-//	if err = template.Execute(w, nil); err != nil {
-//		log.Println(err)
-//		return
-//	}
-//}
-
 func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
-	//log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
-	//session, _ := store.Get(r, "loginData")
-	//userInfo, err := s.getUserFromDbByName(r.PostForm.Get("login"))
-	//if session.Values["login"] == nil {
-	//	http.Redirect(w, r, "/login/", 302)
+	//log.Println("point1")
+	session, _ := store.Get(r, "loginData")
+	if session.Values["id"] == nil {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	r.ParseForm()
+	url:=strings.Split(r.URL.Path,"/")
+	log.Println(url[2])
+	switch url[2] {
+	case "updateinfo":
+		log.Println("kekek")
+		log.Println(session.Values["id"])
+		log.Println(r.PostForm.Get("type"))
+		err := s.createEvent(session.Values["id"].(int) ,r.PostForm.Get("type"))
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+	//user, err := s.getUserFromDbByName(session.Values["login"].(string))
+	//if err != nil {
+	//	log.Println(err)
+	//	return
 	//}
+	fmt.Fprint(w, templates.UserPage())
 }
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
 	log.Println(login)
 	err = s.Db.Get(&user, "SELECT id, name, password, salt FROM users WHERE name = $1", login)
+	return
+}
+
+func (s *server) createEvent(id int, typeOfEvent string) (err error) {
+	log.Println(id)
+	_, err = s.Db.Exec("INSERT INTO events (type, state, user_id) values ($1,$2,$3)", typeOfEvent, 1 , id )
 	return
 }
 
@@ -97,9 +97,11 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	//	log.Println(userInfo)
 	switch r.URL.Path {
 	case "/login":
-		log.Printf("%#v", r.PostForm)
-		log.Println(session.Values["login"])
-		if session.Values["login"] != nil {
+		//log.Printf("%#v", r.PostForm)
+		//log.Println("point2")
+		log.Println(session.Values["id"])
+		//log.Println("point3")
+		if session.Values["id"] != nil {
 			http.Redirect(w, r, "/user/", 302)
 			return
 		}
@@ -110,8 +112,9 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Println(userInfo)
 		if userInfo.Password == r.PostForm.Get("password") {
-			session.Values["login"] = userInfo.Login
-			log.Println(session.Values["login"], "h")
+			log.Println("id of that user", userInfo.Id)
+			session.Values["id"] = userInfo.Id
+			log.Println(session.Values["id"], "h")
 			session.Save(r, w)
 			http.Redirect(w, r, "/user/", 302)
 			return
@@ -119,23 +122,13 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	case "/logout":
 		log.Println("logout")
-		session.Values["login"] = nil
-		log.Println(session.Values["login"])
+		session.Values["id"] = nil
+		log.Println(session.Values["id"])
 		session.Save(r, w)
 		return
 	}
 
 	fmt.Fprint(w, templates.IndexPage())
-}
-
-func (s *server) logoutHandler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
-	session, _ := store.Get(r, "loginData")
-	session.Values["login"] = nil
-	session.Save(r, w)
-	http.Redirect(w, r, "/login/", 302)
-	log.Println("huy")
-	return
 }
 
 func main() {

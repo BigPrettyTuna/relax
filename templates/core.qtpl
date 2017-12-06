@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Login into relax</title>
+    <title>{%s title %}</title>
 </head>
 <body>
 {% endfunc %}

@@ -1,18 +1,19 @@
 package main
 
 import (
-	"log"
-	"flag"
-	"io/ioutil"
 	"encoding/json"
+	"flag"
+	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
+
+	"github.com/bigprettytuna/relax/templates"
 	"github.com/gorilla/sessions"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/bigprettytuna/relax/templates"
-	"fmt"
-	"strings"
 )
 
 var config struct {
@@ -25,6 +26,7 @@ var config struct {
 }
 
 type User = templates.User
+type Event = templates.Event
 
 var (
 	configFile  = flag.String("config", "conf.json", "Where to read the config from")
@@ -57,14 +59,14 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	r.ParseForm()
-	url:=strings.Split(r.URL.Path,"/")
+	url := strings.Split(r.URL.Path, "/")
 	log.Println(url[2])
 	switch url[2] {
 	case "updateinfo":
 		log.Println("kekek")
 		log.Println(session.Values["id"])
 		log.Println(r.PostForm.Get("type"))
-		err := s.createEvent(session.Values["id"].(int) ,r.PostForm.Get("type"))
+		err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type"))
 		if err != nil {
 			log.Println(err)
 			return
@@ -74,8 +76,13 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 	//if err != nil {
 	//	log.Println(err)
 	//	return
-	//}
-	fmt.Fprint(w, templates.UserPage())
+	//}##
+	events, err := s.getEventsFromDbByState(1)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	fmt.Fprint(w, templates.UserPage(events))
 }
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
@@ -84,9 +91,22 @@ func (s *server) getUserFromDbByName(login string) (user User, err error) {
 	return
 }
 
+func (s *server) getEventsFromDbByState(state int) (event []Event, err error) {
+	log.Println(state)
+	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE state = $1 ORDER BY id DESC", state)
+	return
+}
+
+//func (s *server) getEventsFromDbByState(state int) (event []Event, err error) {
+//	log.Println(state)
+//	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE state = $1 ORDER BY id DESC", state)
+//	return
+//}
+
+
 func (s *server) createEvent(id int, typeOfEvent string) (err error) {
 	log.Println(id)
-	_, err = s.Db.Exec("INSERT INTO events (type, state, user_id) values ($1,$2,$3)", typeOfEvent, 1 , id )
+	_, err = s.Db.Exec("INSERT INTO events (type, state, user_id) values ($1,$2,$3)", typeOfEvent, 1, id)
 	return
 }
 

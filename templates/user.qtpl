@@ -1,18 +1,26 @@
+{% import "time" %}
 {% code type User struct {
 Id       int `db:"id"`
 Login    string `db:"name"`
 Password string `db:"password"`
 Salt     string `db:"salt"`
 }
+type Event struct {
+Id       int `db:"id"`
+Type     string `db:"type"`
+State    int `db:"state"`
+User_id  int `db:"user_id"`
+Date     time.Time `db:"time"`
+}
 %}
-
-{% func UserPage() %}
+{% func UserPage(events []Event) %}
 {%= Head("login") %}
 <form method="post" action="/user/updateinfo">
     <p></p>
     <p>type of event</p>
     <input type="text" name="type">
     <input type="submit" value="Start event">
+    {%v events %}
 </form>
 {%= Footer() %}
 {% endfunc %}

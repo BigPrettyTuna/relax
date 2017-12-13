@@ -117,6 +117,10 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	session, _ := store.Get(r, "loginData")
 	r.ParseForm()
 	//	log.Println(userInfo)
+	if session.Values["id"] != nil && r.URL.Path != "/logout" {
+		http.Redirect(w, r, "/user", 302)
+		return
+	}
 	switch r.URL.Path {
 	case "/login":
 		//log.Printf("%#v", r.PostForm)
@@ -147,6 +151,7 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 		session.Values["id"] = nil
 		log.Println(session.Values["id"])
 		session.Save(r, w)
+		http.Redirect(w, r, "/", 302)
 		return
 	}
 

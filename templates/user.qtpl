@@ -4,6 +4,7 @@ Id       int `db:"id"`
 Login    string `db:"name"`
 Password string `db:"password"`
 Salt     string `db:"salt"`
+Permission string `db:"permission"`
 }
 type Event struct {
 //Id       int `db:"id"`

@@ -1,0 +1,18 @@
+{% func AdminPage() %}
+{%= Head("login") %}
+<form method="post" action="/admin/adduser">
+    <p></p>
+    <p>name</p>
+    <input type="text" required name="name">
+    <p>password</p>
+    <input type="password" required name="password">
+    <select name="permission">
+        <option selected="selected">select permission</option>
+        <option>admin</option>
+        <option>user</option>
+    </select>
+    <input type="submit" value="Create new user">
+    <br>
+</form>
+{%= Footer() %}
+{% endfunc %}

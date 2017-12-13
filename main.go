@@ -68,12 +68,13 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("kekek")
 		log.Println(session.Values["id"])
 		log.Println(r.PostForm.Get("type"))
-		if r.PostForm.Get("type") != ""{
-		if err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type")); err != nil {
-			log.Println(err)
-			return
+		if r.PostForm.Get("type") != "" {
+			if err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type")); err != nil {
+				log.Println(err)
+				return
+			}
 		}
-	}}
+	}
 	//user, err := s.getUserFromDbByName(session.Values["login"].(string))
 	//if err != nil {
 	//	log.Println(err)
@@ -91,7 +92,7 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
 	log.Println(login)
-	err = s.Db.Get(&user, "SELECT id, name, password, salt FROM users WHERE name = $1", login)
+	err = s.Db.Get(&user, "SELECT id, name, password, salt, permission FROM users WHERE name = $1", login)
 	return
 }
 
@@ -112,6 +113,39 @@ func (s *server) createEvent(id int, typeOfEvent string) (err error) {
 	return
 }
 
+func (s *server) createUser(name string, password string, permission string) (err error) {
+	//log.Println(id)
+	_, err = s.Db.Exec("INSERT INTO users (name, password, salt, permission) values ($1,$2,$3,$4)", name, password, "ukr", permission)
+	return
+}
+
+func (s *server) adminHandler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
+	session, _ := store.Get(r, "loginData")
+	r.ParseForm()
+	if session.Values["permission"] != "admin" {
+		http.Redirect(w, r, "/user", 302)
+		return
+	}
+	url := strings.Split(r.URL.Path, "/")
+	log.Println(url[2])
+	switch url[2] {
+	case "adduser":
+		log.Println("kekek")
+		log.Println(session.Values["id"])
+		log.Println(r.PostForm.Get("name"))
+		log.Println(r.PostForm.Get("password"))
+		log.Println(r.PostForm.Get("permission"))
+		if r.PostForm.Get("permission") != "" {
+			if err := s.createUser(r.PostForm.Get("name"),r.PostForm.Get("password"),r.PostForm.Get("permission")); err != nil {
+				log.Println(err)
+				return
+			}
+		}
+	}
+	fmt.Fprint(w, templates.AdminPage())
+}
+
 func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
 	session, _ := store.Get(r, "loginData")
@@ -125,7 +159,7 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	case "/login":
 		//log.Printf("%#v", r.PostForm)
 		//log.Println("point2")
-		log.Println(session.Values["id"])
+		//log.Println(session.Values["id"])
 		//log.Println("point3")
 		if session.Values["id"] != nil {
 			http.Redirect(w, r, "/user/", 302)
@@ -141,6 +175,7 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println("id of that user", userInfo.Id)
 			session.Values["id"] = userInfo.Id
 			log.Println(session.Values["id"], "h")
+			session.Values["permission"] = userInfo.Permission
 			session.Save(r, w)
 			http.Redirect(w, r, "/user/", 302)
 			return
@@ -176,6 +211,7 @@ func main() {
 
 	http.HandleFunc("/", s.indexHandler)
 	http.HandleFunc("/user/", s.userHandler)
+	http.HandleFunc("/admin/", s.adminHandler)
 	port := strconv.Itoa(*servicePort)
 	log.Println("Server started at port", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {

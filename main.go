@@ -25,8 +25,10 @@ var config struct {
 	SessionKey string `json:"sessionKey"`
 }
 
-type User = templates.User
-type Event = templates.Event
+type (
+	User = templates.User
+	Event = templates.Event
+)
 
 var (
 	configFile  = flag.String("config", "conf.json", "Where to read the config from")
@@ -66,23 +68,25 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println("kekek")
 		log.Println(session.Values["id"])
 		log.Println(r.PostForm.Get("type"))
-		err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type"))
-		if err != nil {
+		if r.PostForm.Get("type") != ""{
+		if err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type")); err != nil {
 			log.Println(err)
 			return
 		}
-	}
+	}}
 	//user, err := s.getUserFromDbByName(session.Values["login"].(string))
 	//if err != nil {
 	//	log.Println(err)
 	//	return
 	//}##
-	events, err := s.getEventsFromDbByState(1)
+	//events, err := s.getEventsFromDbByTime()
+	events2, err := s.timerToEvents()
+	log.Println(events2)
 	if err != nil {
 		log.Println(err)
 		return
 	}
-	fmt.Fprint(w, templates.UserPage(events))
+	fmt.Fprint(w, templates.UserPage(events2))
 }
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
@@ -91,18 +95,16 @@ func (s *server) getUserFromDbByName(login string) (user User, err error) {
 	return
 }
 
-func (s *server) getEventsFromDbByState(state int) (event []Event, err error) {
-	log.Println(state)
-	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE state = $1 ORDER BY id DESC", state)
+func (s *server) getEventsFromDbByTime() (event []Event, err error) {
+	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE CURRENT_TIMESTAMP() < end_time ORDER BY id DESC")
 	return
 }
 
-//func (s *server) getEventsFromDbByState(state int) (event []Event, err error) {
-//	log.Println(state)
-//	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE state = $1 ORDER BY id DESC", state)
-//	return
-//}
-
+func (s *server) timerToEvents() (event []Event, err error) {
+	//log.Println(state)
+	err = s.Db.Select(&event, "SELECT e.type, u.name, e.time FROM events AS e INNER JOIN users AS u ON u.id = e.user_id WHERE CURRENT_TIMESTAMP() < end_time ORDER BY e.time DESC")
+	return
+}
 
 func (s *server) createEvent(id int, typeOfEvent string) (err error) {
 	log.Println(id)

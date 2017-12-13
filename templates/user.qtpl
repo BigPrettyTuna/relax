@@ -6,20 +6,23 @@ Password string `db:"password"`
 Salt     string `db:"salt"`
 }
 type Event struct {
-Id       int `db:"id"`
+//Id       int `db:"id"`
 Type     string `db:"type"`
-State    int `db:"state"`
-User_id  int `db:"user_id"`
+//State    int `db:"state"`
+//User_id  int `db:"user_id"`
+Name     string `db:"name"`
 Date     time.Time `db:"time"`
+//End_time time.Time `db:"end_time"`
 }
 %}
 {% func UserPage(events []Event) %}
 {%= Head("login") %}
-<form method="post" action="/user/updateinfo">
+<form method="post"   action="/user/updateinfo">
     <p></p>
     <p>type of event</p>
-    <input type="text" name="type">
+    <input type="text" required name="type">
     <input type="submit" value="Start event">
+    <br>
     {%v events %}
 </form>
 {%= Footer() %}

@@ -1,6 +1,7 @@
 {% func AdminPage(permissions string) %}
 {%= Head("adminpage", permissions) %}
-<form method="post" action="/admin/adduser">
+<div class="container">
+<form method="post" class="form-horizontal" action="/admin/adduser">
 
     <div class="form-group">
         <label for="name">name:</label>
@@ -16,5 +17,6 @@
     </div>
     <br>
 </form>
+</div>
 {%= Footer() %}
 {% endfunc %}

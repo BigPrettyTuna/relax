@@ -18,6 +18,7 @@ End_time time.Time `db:"end_time"`
 %}
 {% func UserPage(events []Event, permissions string) %}
 {%= Head("userpage", permissions) %}
+        <div class="container">
 <form method="post"   action="/user/updateinfo">
     <div class="form-group">
         <label for="type">type of event:</label>
@@ -46,5 +47,6 @@ End_time time.Time `db:"end_time"`
         </tbody>
     </table>
 </form>
+        </div>
 {%= Footer() %}
 {% endfunc %}

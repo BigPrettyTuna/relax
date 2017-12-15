@@ -1,6 +1,7 @@
 {% func IndexPage() %}
 {%= Head("login", "") %}
-<form method="post" action="/login">
+<div class="container">
+<form method="post" class="form-horizontal" action="/login">
     <div class="form-group">
         <label for="login">login:</label>
         <input type="text" class="form-control" name="login">
@@ -9,5 +10,6 @@
         <button class="btn btn-primary" type="submit">Log in</button>
     </div>
 </form>
+</div>
 {%= Footer() %}
 {% endfunc %}

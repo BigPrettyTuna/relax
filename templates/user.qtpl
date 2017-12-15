@@ -13,18 +13,38 @@ Type     string `db:"type"`
 //User_id  int `db:"user_id"`
 Name     string `db:"name"`
 Date     time.Time `db:"time"`
-//End_time time.Time `db:"end_time"`
+End_time time.Time `db:"end_time"`
 }
 %}
-{% func UserPage(events []Event) %}
-{%= Head("login") %}
+{% func UserPage(events []Event, permissions string) %}
+{%= Head("userpage", permissions) %}
 <form method="post"   action="/user/updateinfo">
-    <p></p>
-    <p>type of event</p>
-    <input type="text" required name="type">
-    <input type="submit" value="Start event">
+    <div class="form-group">
+        <label for="type">type of event:</label>
+        <input type="text" class="form-control" name="type">
+        <button class="btn btn-primary" type="submit">Start event</button>
+    </div>
     <br>
-    {%v events %}
+    <table class="table table-striped table-hover table-bordered">
+        <thead>
+        <tr>
+            <th>UserName</th>
+            <th>Type</th>
+            <th>StartTime</th>
+            <th>EndTime</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for _, r := range events %}
+        <tr>
+            <td>{%s r.Name %}</td>
+            <td>{%s r.Type %}</td>
+            <td>{%v r.Date %}</td>
+            <td>{%v r.End_time %}</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
 </form>
 {%= Footer() %}
 {% endfunc %}

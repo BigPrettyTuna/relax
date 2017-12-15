@@ -1,11 +1,31 @@
-{% func Head(title string) %}
+{% func Head(title string, permissions string) %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>{%s title %}</title>
+    <link type="text/css" rel="stylesheet" href="/static/css/bootstrap.min.css">
+    <link type="text/css" rel="stylesheet" href="/static/css/ripples.min.css">
+    <link type="text/css" rel="stylesheet" href="/static/css/bootstrap-material-design.min.css">
 </head>
 <body>
+<div id="blurr">
+    <div class="navbar navbar-inverse">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/">Relax</a>
+            </div>
+            <div class="nav navbar-nav" {% if permissions == "" %} hidden {% endif %} >
+                <li><a href="/user">user</a></li>
+            </div>
+            <div class="nav navbar-nav" {% if permissions != "admin" %} hidden {% endif %}>
+                <li><a href="/admin">admin</a></li>
+            </div>
+            <div class="nav navbar-nav navbar-right" {% if permissions == "" %} hidden {% endif %} >
+                <li><a href="/logout">logout</a></li>
+            </div>
+        </div>
+    </div>
 {% endfunc %}
 
 {% func Footer() %}

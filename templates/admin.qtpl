@@ -1,17 +1,19 @@
-{% func AdminPage() %}
-{%= Head("login") %}
+{% func AdminPage(permissions string) %}
+{%= Head("adminpage", permissions) %}
 <form method="post" action="/admin/adduser">
-    <p></p>
-    <p>name</p>
-    <input type="text" required name="name">
-    <p>password</p>
-    <input type="password" required name="password">
-    <select name="permission">
-        <option selected="selected">select permission</option>
-        <option>admin</option>
-        <option>user</option>
-    </select>
-    <input type="submit" value="Create new user">
+
+    <div class="form-group">
+        <label for="name">name:</label>
+        <input type="text" class="form-control" name="name" required>
+        <label for="password">password:</label>
+        <input type="password" class="form-control" name="password" required>
+        <label for="permission">permission:</label>
+        <select class="form-control" name="permission">
+            <option>admin</option>
+            <option selected>user</option>
+        </select>
+        <button class="btn btn-primary" type="submit">Create new user</button>
+    </div>
     <br>
 </form>
 {%= Footer() %}

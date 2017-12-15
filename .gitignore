@@ -71,3 +71,4 @@ fabric.properties
 .idea/*
 
 conf.json
+/favicon.ico

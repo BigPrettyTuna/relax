@@ -32,7 +32,7 @@ type (
 
 var (
 	configFile  = flag.String("config", "conf.json", "Where to read the config from")
-	servicePort = flag.Int("port", 4001, "Service port number")
+	servicePort = flag.Int("port", 4007, "Service port number")
 	store       *sessions.CookieStore
 )
 
@@ -87,7 +87,7 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	fmt.Fprint(w, templates.UserPage(events2))
+	fmt.Fprint(w, templates.UserPage(events2, session.Values["permission"].(string)))
 }
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
@@ -96,14 +96,9 @@ func (s *server) getUserFromDbByName(login string) (user User, err error) {
 	return
 }
 
-func (s *server) getEventsFromDbByTime() (event []Event, err error) {
-	err = s.Db.Select(&event, "SELECT id, type, state, user_id, time FROM events WHERE CURRENT_TIMESTAMP() < end_time ORDER BY id DESC")
-	return
-}
-
 func (s *server) timerToEvents() (event []Event, err error) {
 	//log.Println(state)
-	err = s.Db.Select(&event, "SELECT e.type, u.name, e.time FROM events AS e INNER JOIN users AS u ON u.id = e.user_id WHERE CURRENT_TIMESTAMP() < end_time ORDER BY e.time DESC")
+	err = s.Db.Select(&event, "SELECT e.type, u.name, e.time, e.end_time FROM events AS e INNER JOIN users AS u ON u.id = e.user_id WHERE CURRENT_TIMESTAMP() < end_time ORDER BY e.time DESC")
 	return
 }
 
@@ -143,11 +138,15 @@ func (s *server) adminHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	fmt.Fprint(w, templates.AdminPage())
+	fmt.Fprint(w, templates.AdminPage(session.Values["permission"].(string)))
 }
 
 func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Loaded %s page from %s", r.URL.Path, r.Header.Get("X-Real-IP"))
+	if r.URL.Path == "/favicon.ico" {
+		http.ServeFile(w, r, "favicon.ico")
+		return
+	}
 	session, _ := store.Get(r, "loginData")
 	r.ParseForm()
 	//	log.Println(userInfo)
@@ -184,6 +183,7 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	case "/logout":
 		log.Println("logout")
 		session.Values["id"] = nil
+		session.Values["permission"] = nil
 		log.Println(session.Values["id"])
 		session.Save(r, w)
 		http.Redirect(w, r, "/", 302)

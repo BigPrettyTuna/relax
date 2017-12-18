@@ -1,14 +1,18 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/bigprettytuna/relax/templates"
 	"github.com/gorilla/sessions"
@@ -35,6 +39,8 @@ var (
 	servicePort = flag.Int("port", 4007, "Service port number")
 	store       *sessions.CookieStore
 )
+var seededRand *rand.Rand = rand.New(
+	rand.NewSource(time.Now().UnixNano()))
 
 type server struct {
 	Db *sqlx.DB
@@ -45,8 +51,7 @@ func loadConfig() error {
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(jsonData, &config)
-	if err != nil {
+	if err = json.Unmarshal(jsonData, &config); err != nil {
 		return err
 	}
 	store = sessions.NewCookieStore([]byte(config.SessionKey))
@@ -54,7 +59,6 @@ func loadConfig() error {
 }
 
 func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
-	//log.Println("point1")
 	session, _ := store.Get(r, "loginData")
 	if session.Values["id"] == nil {
 		http.Redirect(w, r, "/", 302)
@@ -62,12 +66,8 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	r.ParseForm()
 	url := strings.Split(r.URL.Path, "/")
-	log.Println(url[2])
 	switch url[2] {
 	case "updateinfo":
-		log.Println("kekek")
-		log.Println(session.Values["id"])
-		log.Println(r.PostForm.Get("type"))
 		if r.PostForm.Get("type") != "" {
 			if err := s.createEvent(session.Values["id"].(int), r.PostForm.Get("type")); err != nil {
 				log.Println(err)
@@ -75,14 +75,7 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	//user, err := s.getUserFromDbByName(session.Values["login"].(string))
-	//if err != nil {
-	//	log.Println(err)
-	//	return
-	//}##
-	//events, err := s.getEventsFromDbByTime()
 	events2, err := s.timerToEvents()
-	log.Println(events2)
 	if err != nil {
 		log.Println(err)
 		return
@@ -91,27 +84,42 @@ func (s *server) userHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *server) getUserFromDbByName(login string) (user User, err error) {
-	log.Println(login)
 	err = s.Db.Get(&user, "SELECT id, name, password, salt, permission FROM users WHERE name = $1", login)
 	return
 }
 
 func (s *server) timerToEvents() (event []Event, err error) {
-	//log.Println(state)
 	err = s.Db.Select(&event, "SELECT e.type, u.name, e.time, e.end_time FROM events AS e INNER JOIN users AS u ON u.id = e.user_id WHERE CURRENT_TIMESTAMP() < end_time ORDER BY e.time DESC")
 	return
 }
 
 func (s *server) createEvent(id int, typeOfEvent string) (err error) {
-	log.Println(id)
 	_, err = s.Db.Exec("INSERT INTO events (type, state, user_id) values ($1,$2,$3)", typeOfEvent, 1, id)
 	return
 }
 
-func (s *server) createUser(name string, password string, permission string) (err error) {
-	//log.Println(id)
-	_, err = s.Db.Exec("INSERT INTO users (name, password, salt, permission) values ($1,$2,$3,$4)", name, password, "ukr", permission)
+func hashingPassword(pass string, salt string) (string) {
+	hasher := sha256.New()
+	hasher.Write([]byte(pass))
+	hashedPassword := hex.EncodeToString(hasher.Sum(nil));
+	hashedPassword += salt
+	hasher = sha256.New()
+	hasher.Write([]byte(hashedPassword))
+	hashedPassword = hex.EncodeToString(hasher.Sum(nil));
+	return hashedPassword
+}
+
+func (s *server) createUser(name string, password string, permission string, salt string) (err error) {
+	_, err = s.Db.Exec("INSERT INTO users (name, password, salt, permission) values ($1,$2,$3,$4)", name, hashingPassword(password, salt), salt, permission)
 	return
+}
+
+func randomString(length int, charset string) string {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
+	}
+	return string(b)
 }
 
 func (s *server) adminHandler(w http.ResponseWriter, r *http.Request) {
@@ -123,16 +131,10 @@ func (s *server) adminHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	url := strings.Split(r.URL.Path, "/")
-	log.Println(url[2])
 	switch url[2] {
 	case "adduser":
-		log.Println("kekek")
-		log.Println(session.Values["id"])
-		log.Println(r.PostForm.Get("name"))
-		log.Println(r.PostForm.Get("password"))
-		log.Println(r.PostForm.Get("permission"))
 		if r.PostForm.Get("permission") != "" {
-			if err := s.createUser(r.PostForm.Get("name"),r.PostForm.Get("password"),r.PostForm.Get("permission")); err != nil {
+			if err := s.createUser(r.PostForm.Get("name"), r.PostForm.Get("password"), r.PostForm.Get("permission"), randomString(3, "abcdefghijklmnopqrstuvwxyz")); err != nil {
 				log.Println(err)
 				return
 			}
@@ -149,17 +151,12 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	session, _ := store.Get(r, "loginData")
 	r.ParseForm()
-	//	log.Println(userInfo)
 	if session.Values["id"] != nil && r.URL.Path != "/logout" {
 		http.Redirect(w, r, "/user", 302)
 		return
 	}
 	switch r.URL.Path {
 	case "/login":
-		//log.Printf("%#v", r.PostForm)
-		//log.Println("point2")
-		//log.Println(session.Values["id"])
-		//log.Println("point3")
 		if session.Values["id"] != nil {
 			http.Redirect(w, r, "/user/", 302)
 			return
@@ -169,11 +166,8 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			return
 		}
-		log.Println(userInfo)
-		if userInfo.Password == r.PostForm.Get("password") {
-			log.Println("id of that user", userInfo.Id)
+		if userInfo.Password == hashingPassword(r.PostForm.Get("password"), userInfo.Salt) {
 			session.Values["id"] = userInfo.Id
-			log.Println(session.Values["id"], "h")
 			session.Values["permission"] = userInfo.Permission
 			session.Save(r, w)
 			http.Redirect(w, r, "/user/", 302)
@@ -181,10 +175,8 @@ func (s *server) indexHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 	case "/logout":
-		log.Println("logout")
 		session.Values["id"] = nil
 		session.Values["permission"] = nil
-		log.Println(session.Values["id"])
 		session.Save(r, w)
 		http.Redirect(w, r, "/", 302)
 		return
@@ -200,7 +192,7 @@ func main() {
 	}
 	log.Println("Config loaded from", *configFile)
 	s := server{
-		Db: sqlx.MustConnect("postgres", "host="+config.DbHost+" port="+config.DbPort+" user="+config.DbLogin+" dbname="+config.DbDb+" password="+config.DbPassword),
+		Db: sqlx.MustConnect("postgres", "host="+config.DbHost+" port="+config.DbPort+" user="+config.DbLogin+" dbname="+config.DbDb+" password="+config.DbPassword+"  client_encoding=UTF8"),
 	}
 	defer s.Db.Close()
 
